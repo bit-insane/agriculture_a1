@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YOLO Object Detection</title>
+    <style>
+        /* Base Styles from AgriTech */
+        :root {
+            --primary-green: #4CAF50;
+            --dark-green: #2E7D32;
+            --light-green: #A5D6A7;
+            --white: #ffffff;
+            --light-gray: #f5f5f5;
+            --dark-gray: #333333;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: var(--dark-gray);
+            background-color: var(--white);
+            overflow-x: hidden;
+        }
+        
+        .container {
+            width: 90%;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+        
+        h1, h2, h3 {
+            margin-bottom: 20px;
+            color: var(--dark-green);
+        }
+        
+        p {
+            margin-bottom: 15px;
+        }
+        
+        /* Header */
+        header {
+            background-color: var(--white);
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            position: fixed;
+            width: 100%;
+            z-index: 1000;
+        }
+        
+        nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 0;
+        }
+        
+        .logo {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--dark-green);
+            text-decoration: none;
+        }
+        
+        .logo span {
+            color: var(--primary-green);
+        }
+        
+        .nav-links {
+            display: flex;
+            list-style: none;
+        }
+        
+        .nav-links li {
+            margin-left: 30px;
+        }
+        
+        .nav-links a {
+            text-decoration: none;
+            color: var(--dark-gray);
+            font-weight: 500;
+            transition: color 0.3s ease;
+        }
+        
+        .nav-links a:hover {
+            color: var(--primary-green);
+        }
+        
+        .mobile-menu {
+            display: none;
+            font-size: 24px;
+            cursor: pointer;
+        }
+        
+        /* Mobile Menu */
+        .mobile-nav {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: var(--white);
+            z-index: 2000;
+            padding: 20px;
+            transform: translateX(-100%);
+            transition: transform 0.3s ease;
+        }
+        
+        .mobile-nav.active {
+            transform: translateX(0);
+        }
+        
+        .mobile-nav-close {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            font-size: 24px;
+            cursor: pointer;
+        }
+        
+        .mobile-nav-links {
+            list-style: none;
+            margin-top: 60px;
+        }
+        
+        .mobile-nav-links li {
+            margin-bottom: 20px;
+        }
+        
+        .mobile-nav-links a {
+            text-decoration: none;
+            color: var(--dark-gray);
+            font-size: 18px;
+            font-weight: 500;
+            transition: color 0.3s ease;
+        }
+        
+        .mobile-nav-links a:hover {
+            color: var(--primary-green);
+        }
+        
+        /* Main Content */
+        .main-content {
+            padding-top: 100px;
+            padding-bottom: 50px;
+        }
+        
+        .section-title {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .section-title h1 {
+            font-size: 36px;
+            position: relative;
+            display: inline-block;
+            padding-bottom: 15px;
+        }
+        
+        .section-title h1::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 80px;
+            height: 3px;
+            background-color: var(--primary-green);
+        }
+        
+        /* Toggle Button Styles */
+        .toggle-container {
+            display: flex;
+            justify-content: center;
+            margin: 30px 0;
+        }
+        
+        .toggle-btn {
+            background-color: #f1f1f1;
+            border: none;
+            color: #555;
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+        }
+        
+        .toggle-btn:first-child {
+            border-radius: 5px 0 0 5px;
+        }
+        
+        .toggle-btn:last-child {
+            border-radius: 0 5px 5px 0;
+        }
+        
+        .toggle-btn.active {
+            background-color: var(--primary-green);
+            color: white;
+        }
+        
+        /* Video Container Styles */
+        .feed-container {
+            width: 100%;
+        }
+        
+        .container {
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            gap: 30px;
+            flex-wrap: wrap;
+            margin-top: 20px;
+        }
+        
+        .video-container {
+            background: var(--white);
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            flex: 1 1 500px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            transition: transform 0.3s ease;
+        }
+        
+        .video-section {
+            display: flex;
+            justify-content: space-between; /* Align canvases in a row */
+            gap: 30px; /* Add some space between the canvases */
+        }
+
+        
+        .video-container h3 {
+            color: var(--dark-green);
+            margin-bottom: 20px;
+            font-size: 20px;
+        }
+                
+        canvas {
+            width: 100%; /* Make sure canvases fill the container width */
+            height: auto;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        
+        .status {
+            margin-top: 15px;
+            padding: 8px 15px;
+            border-radius: 5px;
+            font-weight: bold;
+        }
+        
+        .connected {
+            background-color: var(--light-green);
+            color: var(--dark-green);
+        }
+        
+        .disconnected {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+        
+        #detection-status {
+            margin-top: 15px;
+            font-weight: bold;
+            color: var(--dark-gray);
+            padding: 8px 15px;
+            background-color: var(--light-gray);
+            border-radius: 5px;
+        }
+        
+        /* Analysis Section Styles */
+        .analysis-container {
+            display: none;
+            width: 100%;
+        }
+        
+        .analysis-section {
+            background: var(--white);
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            flex: 1;
+            margin: 10px;
+        }
+        
+        .data-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        
+        .data-value {
+            font-size: 2rem;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+        
+        .temperature {
+            color: #e74c3c;
+        }
+        
+        .humidity {
+            color: #3498db;
+        }
+        
+        .graph-container {
+            width: 100%;
+            height: 200px;
+            margin-top: 20px;
+        }
+        
+        /* Footer */
+        footer {
+            background-color: var(--dark-green);
+            color: var(--white);
+            padding: 30px 0;
+            text-align: center;
+        }
+        
+        /* Responsive Styles */
+        @media (max-width: 992px) {
+            .section-title h1 {
+                font-size: 32px;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .nav-links {
+                display: none;
+            }
+            
+            .mobile-menu {
+                display: block;
+            }
+            
+            .section-title h1 {
+                font-size: 28px;
+            }
+            
+            .container {
+                gap: 20px;
+            }
+            
+            .video-container {
+                flex: 1 1 100%;
+                padding: 15px;
+            }
+        }
+        
+        @media (max-width: 576px) {
+            .section-title h1 {
+                font-size: 24px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header>
+        <div class="container">
+            <nav>
+                <a href="#" class="logo">Vision<span>AI</span></a>
+                <ul class="nav-links">
+                    <li><a href="#home">Home</a></li>
+                    <li><a href="#detection">Detection</a></li>
+                    <li><a href="#analytics">Analytics</a></li>
+                    <li><a href="#settings">Settings</a></li>
+                </ul>
+                <div class="mobile-menu">☰</div>
+            </nav>
+        </div>
+    </header>
+    
+    <div class="mobile-nav">
+        <div class="mobile-nav-close">✕</div>
+        <ul class="mobile-nav-links">
+            <li><a href="#home">Home</a></li>
+            <li><a href="#detection">Detection</a></li>
+            <li><a href="#analytics">Analytics</a></li>
+            <li><a href="#settings">Settings</a></li>
+        </ul>
+    </div>
+    
+    <main class="main-content">
+        <div class="container">
+            <section class="section-title">
+                <h1>Real-time YOLO Object Detection</h1>
+                <p>Advanced computer vision for real-time object detection and analysis</p>
+            </section>
+    
+            <div class="toggle-container">
+                <button id="feed-btn" class="toggle-btn active">Feed</button>
+                <a id="analysis-btn" href="/analysis" class="toggle-btn">Analysis</a>
+            </div>
+    
+            <section id="feed-view" class="feed-container">
+                <div class="video-section">
+                    <div class="video-container">
+                        <h3>📹 Live Camera Feed</h3>
+                        <canvas id="live" width="640" height="480"></canvas>
+                        <div id="ws-status" class="status disconnected">WebSocket: Disconnected</div>
+                    </div>
+    
+                    <div class="video-container">
+                        <h3>🧠 Detection Results</h3>
+                        <canvas id="result" width="640" height="480"></canvas>
+                        <div id="detection-status">Waiting for detection...</div>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </main>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const mobileMenuBtn = document.querySelector('.mobile-menu');
+            const mobileNav = document.querySelector('.mobile-nav');
+            const mobileNavClose = document.querySelector('.mobile-nav-close');
+            const mobileNavLinks = document.querySelectorAll('.mobile-nav-links a');
+        
+            mobileMenuBtn.addEventListener('click', () => mobileNav.classList.add('active'));
+            mobileNavClose.addEventListener('click', () => mobileNav.classList.remove('active'));
+            mobileNavLinks.forEach(link => link.addEventListener('click', () => mobileNav.classList.remove('active')))
+        });
+        
+        const liveCanvas = document.getElementById('live');
+        const liveCtx = liveCanvas.getContext('2d');
+        const resultCanvas = document.getElementById('result');
+        const resultCtx = resultCanvas.getContext('2d');
+        const wsStatus = document.getElementById('ws-status');
+        const detectionStatus = document.getElementById('detection-status');
+        
+        // Roboflow API details
+        const ROBOFLOW_API_URL = "https://detect.roboflow.com/banana-ripeness-classification/5";
+        const ROBOFLOW_API_KEY = "iWTbz1A2Zwcd6yJNw8F3";
+        
+        // Your Flask Server URL to send predictions
+        const FLASK_SERVER_URL = "http://127.0.0.1:5000/update-prediction";
+        
+        const ws = new WebSocket('wss://143e-2409-40c4-2c-dc7a-6342-8fa4-c1e8-9c23.ngrok-free.app/share');
+        ws.binaryType = 'arraybuffer';
+        
+        let buffer = new Uint8Array();
+        let expectedSize = 0;
+        let receivedSize = 0;
+        
+        let lastCaptureTime = 0;
+        const captureInterval = 1000; // in milliseconds (1 second)
+        
+        ws.onopen = () => {
+            console.log("Connected to WebSocket ✅");
+            wsStatus.textContent = "WebSocket: Connected";
+            wsStatus.className = "status connected";
+        };
+        
+        ws.onerror = (error) => {
+            console.error("WebSocket Error ❌", error);
+            wsStatus.textContent = "WebSocket: Error";
+            wsStatus.className = "status disconnected";
+        };
+        
+        ws.onclose = () => {
+            console.log("WebSocket Connection Closed 🔌");
+            wsStatus.textContent = "WebSocket: Disconnected";
+            wsStatus.className = "status disconnected";
+        };
+        
+        ws.onmessage = (event) => {
+            const data = new Uint8Array(event.data);
+        
+            if (expectedSize === 0) {
+                const view = new DataView(data.buffer);
+                expectedSize = Number(view.getBigUint64(0, true));  // Little-endian
+                buffer = new Uint8Array(expectedSize);
+                receivedSize = 0;
+        
+                if (data.length > 8) {
+                    const chunk = data.slice(8);
+                    buffer.set(chunk, receivedSize);
+                    receivedSize += chunk.length;
+                }
+            } else {
+                buffer.set(data, receivedSize);
+                receivedSize += data.length;
+            }
+        
+            if (receivedSize >= expectedSize) {
+                const blob = new Blob([buffer], { type: 'image/jpeg' });
+                const img = new Image();
+                const imgURL = URL.createObjectURL(blob);
+        
+                img.onload = () => {
+                    liveCtx.clearRect(0, 0, liveCanvas.width, liveCanvas.height);
+                    liveCtx.drawImage(img, 0, 0, liveCanvas.width, liveCanvas.height);
+                    URL.revokeObjectURL(imgURL);
+        
+                    const now = Date.now();
+                    if (now - lastCaptureTime >= captureInterval) {
+                        sendToRoboflow(blob);
+                        lastCaptureTime = now;
+                    }
+                };
+        
+                img.onerror = (e) => {
+                    console.error("Failed to load image from buffer", e);
+                };
+        
+                img.src = imgURL;
+        
+                expectedSize = 0;
+                receivedSize = 0;
+            }
+        };
+        
+        async function sendToRoboflow(blob) {
+            try {
+                const formData = new FormData();
+                formData.append("file", blob, "frame.jpg");
+        
+                const response = await fetch(`${ROBOFLOW_API_URL}?api_key=${ROBOFLOW_API_KEY}`, {
+                    method: "POST",
+                    body: formData
+                });
+        
+                if (response.ok) {
+                    const result = await response.json();
+                    console.log("Prediction 🎯:", result);
+        
+                    if (result.predictions && result.predictions.length > 0) {
+                        const pred = result.predictions[0]; // Take first prediction
+                        detectionStatus.textContent = `🍌 ${pred.class} (${(pred.confidence * 100).toFixed(2)}%)`;
+        
+                        // Send prediction to your Flask server
+                        const predictionData = {
+                            ripeness: pred.class,
+                            confidence: pred.confidence,
+                            temperature: null,
+                            humidity: null
+                        };
+        
+                        await fetch(FLASK_SERVER_URL, {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify(predictionData)
+                        });
+                    } else {
+                        detectionStatus.textContent = "No prediction detected.";
+                    }
+        
+                } else {
+                    console.error("Roboflow API Error:", response.status);
+                }
+        
+            } catch (err) {
+                console.error("Error during Roboflow detection:", err);
+            }
+        }
+    </script>
+        
+    
+</body>
+</html>

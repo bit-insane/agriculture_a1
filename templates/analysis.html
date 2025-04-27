@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Live Sensor Analysis</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        /* Base Styles from AgriTech */
+        :root {
+            --primary-green: #4CAF50;
+            --dark-green: #2E7D32;
+            --light-green: #A5D6A7;
+            --white: #ffffff;
+            --light-gray: #f5f5f5;
+            --dark-gray: #333333;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: var(--dark-gray);
+            background-color: var(--white);
+            overflow-x: hidden;
+        }
+        
+        .container {
+            width: 90%;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+        
+        section {
+            padding: 80px 0;
+        }
+        
+        h1, h2, h3 {
+            margin-bottom: 20px;
+            color: var(--dark-green);
+        }
+        
+        p {
+            margin-bottom: 15px;
+        }
+        
+        /* Header */
+        header {
+            background-color: var(--white);
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            position: fixed;
+            width: 100%;
+            z-index: 1000;
+        }
+        
+        nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 0;
+        }
+        
+        .logo {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--dark-green);
+            text-decoration: none;
+        }
+        
+        .logo span {
+            color: var(--primary-green);
+        }
+        
+        .nav-links {
+            display: flex;
+            list-style: none;
+        }
+        
+        .nav-links li {
+            margin-left: 30px;
+        }
+        
+        .nav-links a {
+            text-decoration: none;
+            color: var(--dark-gray);
+            font-weight: 500;
+            transition: color 0.3s ease;
+        }
+        
+        .nav-links a:hover {
+            color: var(--primary-green);
+        }
+        
+        .mobile-menu {
+            display: none;
+            font-size: 24px;
+            cursor: pointer;
+        }
+        
+        /* Mobile Menu */
+        .mobile-nav {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: var(--white);
+            z-index: 2000;
+            padding: 20px;
+            transform: translateX(-100%);
+            transition: transform 0.3s ease;
+        }
+        
+        .mobile-nav.active {
+            transform: translateX(0);
+        }
+        
+        .mobile-nav-close {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            font-size: 24px;
+            cursor: pointer;
+        }
+        
+        .mobile-nav-links {
+            list-style: none;
+            margin-top: 60px;
+        }
+        
+        .mobile-nav-links li {
+            margin-bottom: 20px;
+        }
+        
+        .mobile-nav-links a {
+            text-decoration: none;
+            color: var(--dark-gray);
+            font-size: 18px;
+            font-weight: 500;
+            transition: color 0.3s ease;
+        }
+        
+        .mobile-nav-links a:hover {
+            color: var(--primary-green);
+        }
+        
+        /* Main Content */
+        .main-content {
+            padding-top: 100px;
+            padding-bottom: 50px;
+        }
+        
+        .section-title {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .section-title h1 {
+            font-size: 36px;
+            position: relative;
+            display: inline-block;
+            padding-bottom: 15px;
+        }
+        
+        .section-title h1::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 80px;
+            height: 3px;
+            background-color: var(--primary-green);
+        }
+        
+        /* Toggle Button Styles - Matching mobile-menu styling */
+        .toggle-container {
+            display: flex;
+            justify-content: center;
+            margin: 30px 0;
+        }
+        
+        .toggle-btn {
+            background-color: #f1f1f1;
+            border: none;
+            color: #555;
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+        }
+        
+        .toggle-btn:first-child {
+            border-radius: 5px 0 0 5px;
+        }
+        
+        .toggle-btn:last-child {
+            border-radius: 0 5px 5px 0;
+        }
+        
+        .toggle-btn.active {
+            background-color: var(--primary-green);
+            color: white;
+        }
+        
+        /* Chart Container */
+        .chart-container {
+            background-color: var(--white);
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            padding: 25px;
+            margin-bottom: 30px;
+        }
+        
+        .chart-container h3 {
+            text-align: center;
+            margin-bottom: 20px;
+            color: var(--dark-green);
+        }
+        
+        canvas {
+            max-width: 100%;
+            height: auto;
+        }
+        
+        /* Sensor Data Display */
+        .sensor-data {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            flex-wrap: wrap;
+            margin-top: 30px;
+        }
+        
+        .data-card {
+            background-color: var(--white);
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            padding: 25px;
+            min-width: 200px;
+            flex: 1;
+            max-width: 300px;
+            text-align: center;
+            transition: transform 0.3s ease;
+        }
+        
+        .data-card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .data-icon {
+            width: 60px;
+            height: 60px;
+            background-color: var(--light-green);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 15px;
+            font-size: 24px;
+        }
+        
+        .data-value {
+            font-size: 36px;
+            font-weight: 700;
+            margin: 10px 0;
+        }
+        
+        .temperature {
+            color: #e74c3c;
+        }
+        
+        .humidity {
+            color: #3498db;
+        }
+        
+        .data-label {
+            color: var(--dark-gray);
+            font-weight: 500;
+        }
+        
+        /* Footer */
+        footer {
+            background-color: var(--dark-green);
+            color: var(--white);
+            padding: 30px 0;
+            text-align: center;
+        }
+        
+        /* Responsive Styles */
+        @media (max-width: 992px) {
+            .section-title h1 {
+                font-size: 32px;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .nav-links {
+                display: none;
+            }
+            
+            .mobile-menu {
+                display: block;
+            }
+            
+            .section-title h1 {
+                font-size: 28px;
+            }
+            
+            .data-card {
+                min-width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header>
+        <div class="container">
+            <nav>
+                <a href="#" class="logo">Sensor<span>Tech</span></a>
+                <ul class="nav-links">
+                    <li><a href="#home">Home</a></li>
+                    <li><a href="#dashboard">Dashboard</a></li>
+                    <li><a href="#settings">Settings</a></li>
+                    <li><a href="#help">Help</a></li>
+                </ul>
+                <div class="mobile-menu">☰</div>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Mobile Navigation -->
+    <div class="mobile-nav">
+        <div class="mobile-nav-close">✕</div>
+        <ul class="mobile-nav-links">
+            <li><a href="#home">Home</a></li>
+            <li><a href="#dashboard">Dashboard</a></li>
+            <li><a href="#settings">Settings</a></li>
+            <li><a href="#help">Help</a></li>
+        </ul>
+    </div>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <div class="container">
+            <div class="section-title">
+                <h1>Live Sensor Data</h1>
+                <p>Real-time monitoring of environmental conditions</p>
+            </div>
+            
+            <div class="toggle-container">
+                <a href="/feed" id="feed-btn" class="toggle-btn active">Feed</button>
+                <a href="/analysis" id="analysis-btn" class="toggle-btn">Analysis</a>
+            </div>
+            
+            <div id="feed-view">
+                <div class="chart-container">
+                    <h3>Sensor Readings Over Time</h3>
+                    <canvas id="sensorChart" width="600" height="400"></canvas>
+                </div>
+                
+                <div class="sensor-data">
+                    <div class="data-card">
+                        <div class="data-icon">🌡️</div>
+                        <h3>Temperature</h3>
+                        <div id="latest-temp" class="data-value temperature">--</div>
+                        <div class="data-label">Degrees Celsius</div>
+                    </div>
+                    
+                    <div class="data-card">
+                        <div class="data-icon">💧</div>
+                        <h3>Humidity</h3>
+                        <div id="latest-humidity" class="data-value humidity">--</div>
+                        <div class="data-label">Percent</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer>
+        <div class="container">
+            <p>&copy; 2025 SensorTech. All Rights Reserved.</p>
+        </div>
+    </footer>
+
+    <script>
+        // Mobile menu functionality
+        document.addEventListener('DOMContentLoaded', function() {
+            const mobileMenuBtn = document.querySelector('.mobile-menu');
+            const mobileNav = document.querySelector('.mobile-nav');
+            const mobileNavClose = document.querySelector('.mobile-nav-close');
+            const mobileNavLinks = document.querySelectorAll('.mobile-nav-links a');
+            
+            // Open mobile menu
+            mobileMenuBtn.addEventListener('click', function() {
+                mobileNav.classList.add('active');
+            });
+            
+            // Close mobile menu
+            mobileNavClose.addEventListener('click', function() {
+                mobileNav.classList.remove('active');
+            });
+            
+            // Close mobile menu when clicking a link
+            mobileNavLinks.forEach(link => {
+                link.addEventListener('click', function() {
+                    mobileNav.classList.remove('active');
+                });
+            });
+            
+            // Toggle button functionality
+            const feedBtn = document.getElementById('feed-btn');
+            const analysisBtn = document.getElementById('analysis-btn');
+            
+            feedBtn.addEventListener('click', function() {
+                feedBtn.classList.add('active');
+                analysisBtn.classList.remove('active');
+            });
+        });
+
+        // Chart.js setup
+        let temperatureData = JSON.parse(localStorage.getItem('temperatureData')) || [];
+        let humidityData = JSON.parse(localStorage.getItem('humidityData')) || [];
+        let timestamps = JSON.parse(localStorage.getItem('timestamps')) || [];
+
+        const ctx = document.getElementById('sensorChart').getContext('2d');
+        const sensorChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: timestamps,
+                datasets: [
+                    {
+                        label: 'Temperature (°C)',
+                        data: temperatureData,
+                        borderColor: '#e74c3c',
+                        backgroundColor: 'rgba(231, 76, 60, 0.1)',
+                        fill: true,
+                        tension: 0.4,
+                        borderWidth: 2
+                    },
+                    {
+                        label: 'Humidity (%)',
+                        data: humidityData,
+                        borderColor: '#3498db',
+                        backgroundColor: 'rgba(52, 152, 219, 0.1)',
+                        fill: true,
+                        tension: 0.4,
+                        borderWidth: 2
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        position: 'top',
+                    },
+                    tooltip: {
+                        mode: 'index',
+                        intersect: false,
+                    }
+                },
+                scales: {
+                    x: { 
+                        title: { 
+                            display: true, 
+                            text: 'Time',
+                            color: '#555'
+                        },
+                        grid: {
+                            display: true,
+                            color: 'rgba(0, 0, 0, 0.05)'
+                        }
+                    },
+                    y: {
+                        beginAtZero: true,
+                        title: { 
+                            display: true, 
+                            text: 'Value',
+                            color: '#555'
+                        },
+                        grid: {
+                            display: true,
+                            color: 'rgba(0, 0, 0, 0.05)'
+                        }
+                    }
+                },
+                interaction: {
+                    mode: 'nearest',
+                    axis: 'x',
+                    intersect: false
+                }
+            }
+        });
+
+        async function fetchDataAndUpdate() {
+            try {
+                const response = await fetch("https://143e-2409-40c4-2c-dc7a-6342-8fa4-c1e8-9c23.ngrok-free.app/get-sensor-data", {
+                    method: "GET",
+                    headers: {
+                        "Accept": "application/json",
+                        "ngrok-skip-browser-warning": "true" // Bypass ngrok browser warning
+                    }
+                });
+                console.log("data", response)
+                const data = await response.json();
+                console.log("Fetched:", data);
+
+                const now = new Date();
+                const timeLabel = now.getHours() + ":" + 
+                                 (now.getMinutes() < 10 ? '0' : '') + now.getMinutes() + ":" + 
+                                 (now.getSeconds() < 10 ? '0' : '') + now.getSeconds();
+
+                temperatureData.push(data.temperature);
+                humidityData.push(data.humidity);
+                timestamps.push(timeLabel);
+
+                // Keep only the last 20 data points to avoid cluttering the chart
+                if (temperatureData.length > 20) {
+                    temperatureData = temperatureData.slice(-20);
+                    humidityData = humidityData.slice(-20);
+                    timestamps = timestamps.slice(-20);
+                }
+
+                localStorage.setItem('temperatureData', JSON.stringify(temperatureData));
+                localStorage.setItem('humidityData', JSON.stringify(humidityData));
+                localStorage.setItem('timestamps', JSON.stringify(timestamps));
+
+                sensorChart.data.labels = timestamps;
+                sensorChart.data.datasets[0].data = temperatureData;
+                sensorChart.data.datasets[1].data = humidityData;
+                sensorChart.update();
+
+                document.getElementById('latest-temp').innerText = data.temperature.toFixed(1);
+                document.getElementById('latest-humidity').innerText = data.humidity.toFixed(1);
+
+            } catch (error) {
+                console.error("Error fetching data:", error);
+            }
+        }
+
+        // First fetch immediately
+        fetchDataAndUpdate();
+
+        // Then fetch every 5 seconds
+        setInterval(fetchDataAndUpdate, 5000);
+    </script>
+</body>
+</html>
